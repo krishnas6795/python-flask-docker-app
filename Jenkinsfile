@@ -2,9 +2,7 @@ pipeline {
     agent any
 
     environment {
-        // Define your Docker Hub credentials
-        DOCKER_HUB_CREDENTIALS = credentials('docker-hub-credentials-id')
-        // Define your Docker image name and tag
+        DOCKER_HUB_USERNAME = 'krishdockhub'
         DOCKER_IMAGE_NAME = 'krishdockhub/flask-docker-app'
         DOCKER_IMAGE_TAG = 'latest'
     }
@@ -17,34 +15,36 @@ pipeline {
                 }
             }
         }
+        stage("Build") {
+            steps {
+                sh """
+                    docker build -t ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG} .
+                """
+            }
+        }
         
-        stage('Build and Push Docker Image') {
+        stage("Push to DockerHub") {
             steps {
                 script {
-                    // Build the Docker image
-                    dockerImage = docker.build("${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}")
-
-                    // Log in to Docker Hub
-                    docker.withRegistry('https://registry.hub.docker.com', DOCKER_HUB_CREDENTIALS) {
-                        // Push the Docker image to Docker Hub
-                        dockerImage.push()
+                    withCredentials([string(credentialsId: 'dockerhubpwd', variable: 'dockerhubpwd')]) {
+                    sh 'docker login -u ${DOCKER_HUB_USERNAME} -p ${dockerhubpwd}'
                     }
+                    sh 'docker push ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}'
                 }
             }
         }
 
-        stage('Deploy') {
+        stage("Deploy") {
             steps {
                 script {
-                    // Run the Docker container
-                    docker.image("${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}").withRun('-p 5000:5000') {
-                        // Add any additional steps needed after running the container
-                        echo 'Docker container is running...'
-                    }
-                }
+                    sh """
+                    docker run -p 5000:5000 -d ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}
+                    """
+                    echo 'Docker container is running...'
+                }                
             }
         }
-    }
+
 
     post {
         success {
