@@ -5,6 +5,7 @@ pipeline {
         DOCKER_HUB_USERNAME = 'krishdockhub'
         DOCKER_IMAGE_NAME = 'krishdockhub/flask-docker-app'
         DOCKER_IMAGE_TAG = 'latest'
+        DOCKER_CONTAINER_NAME = 'flask_container'
     }
     stages {
         stage('Checkout') {
@@ -37,8 +38,9 @@ pipeline {
         stage("Deploy") {
             steps {
                 script {
+                    sh 'docker rm -f ${DOCKER_CONTAINER_NAME}'
                     sh """
-                    docker run -p 5000:5000 -d ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}
+                    docker run -p 5000:5000 --name ${DOCKER_CONTAINER_NAME} -d ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}
                     """
                     echo 'Docker container is running...'
                 }                
